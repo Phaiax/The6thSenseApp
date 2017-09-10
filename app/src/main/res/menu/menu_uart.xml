@@ -1,0 +1,76 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.adafruit.bluefruit.le.connect.app.UartActivity">
+
+
+
+    <group android:id="@+id/uartControls">
+
+        <item
+            android:id="@+id/action_displaymode"
+            android:title="Displaymode"
+            app:showAsAction="never">
+
+            <menu>
+                <group
+                    android:id="@+id/displayMode"
+                    android:checkableBehavior="single">
+                    <item
+                        android:id="@+id/action_displaymode_timestamp"
+                        android:title="Timestamp"
+                        app:showAsAction="never" />
+
+                    <item
+                        android:id="@+id/action_displaymode_text"
+                        android:title="Textmode"
+                        app:showAsAction="never" />
+                </group>
+            </menu>
+        </item>
+        <item
+            android:id="@+id/action_datamode"
+            android:title="Datamode"
+            app:showAsAction="never">
+
+            <menu>
+                <group
+                    android:id="@+id/dataMode"
+                    android:checkableBehavior="single">
+                    <item
+                        android:id="@+id/action_datamode_ascii"
+                        android:title="Ascii"
+                        app:showAsAction="never" />
+
+                    <item
+                        android:id="@+id/action_datamode_hex"
+                        android:title="Hex"
+                        app:showAsAction="never" />
+                </group>
+            </menu>
+        </item>
+
+        <group
+            android:id="@+id/uartUserTextControls"
+            android:checkableBehavior="all">
+            <item
+                android:id="@+id/action_echo"
+                android:title="Echo?"
+                app:showAsAction="never" />
+            <item
+                android:id="@+id/action_eol"
+                android:title="Eol?"
+                app:showAsAction="never" />
+        </group>
+    </group>
+
+
+    <group android:id="@+id/extra">
+
+        <item
+            android:id="@+id/action_refreshcache"
+            android:title="RefreshCache"
+            app:showAsAction="never" />
+
+    </group>
+</menu>
