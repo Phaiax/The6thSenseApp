@@ -8,6 +8,7 @@ import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
@@ -34,9 +35,20 @@ public class CalibrateActivity extends AppCompatActivity {
     ToggleButton mLed3;
     ToggleButton mLed4;
     CheckBox mVibActive;
+    SeekBar mVibThresh;
+    SeekBar mMaxIntensity;
+    SeekBar mVibLoopTime;
+    SeekBar mManVibFront;
+    SeekBar mManVibLeft;
+    SeekBar mManVibRight;
+    SeekBar mManVibBack;
+    TextView mRotate;
     // endregion
 
+    boolean mMonitoringEnabled = false;
+
     CompoundButton.OnCheckedChangeListener mLedHandler;
+    SeekBar.OnSeekBarChangeListener mManVibListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,16 +57,19 @@ public class CalibrateActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        mFoot = new TheFoot(this);
+
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+                mMonitoringEnabled = !mMonitoringEnabled;
+                mFoot.setMonitoring(mMonitoringEnabled);
+//                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+//                        .setAction("Action", null).show();
+
             }
         });
-
-        mFoot = new TheFoot(this);
 
 
         mQualiGyro = (TextView) findViewById(R.id.text_qual_gyro);
@@ -94,6 +109,93 @@ public class CalibrateActivity extends AppCompatActivity {
             }
         });
 
+        mVibThresh = (SeekBar) findViewById(R.id.vibThresh);
+        mVibThresh.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                mFoot.setVibThreshold( (float) seekBar.getProgress() / 100.0f);
+            }
+        });
+
+        mMaxIntensity = (SeekBar) findViewById(R.id.maxIntensity);
+        mMaxIntensity.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                mFoot.setMaxVibIntensity(mMaxIntensity.getProgress());
+            }
+        });
+
+        mVibLoopTime = (SeekBar) findViewById(R.id.vibrationLoopTime);
+        mVibLoopTime.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                mFoot.setVibLoopTime(mVibLoopTime.getProgress());
+            }
+        });
+
+        mManVibListener = new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                mFoot.setManualVibrations(
+                        mManVibFront.getProgress(),
+                        mManVibRight.getProgress(),
+                        mManVibLeft.getProgress(),
+                        mManVibBack.getProgress()
+                );
+            }
+        };
+
+        mManVibFront = (SeekBar) findViewById(R.id.manvibfront);
+        mManVibRight = (SeekBar) findViewById(R.id.manvibright);
+        mManVibLeft = (SeekBar) findViewById(R.id.manvibleft);
+        mManVibBack = (SeekBar) findViewById(R.id.manvibback);
+        mManVibFront.setOnSeekBarChangeListener(mManVibListener);
+        mManVibRight.setOnSeekBarChangeListener(mManVibListener);
+        mManVibLeft.setOnSeekBarChangeListener(mManVibListener);
+        mManVibBack.setOnSeekBarChangeListener(mManVibListener);
+
+
+        mRotate = (TextView) findViewById(R.id.rotate);
     }
 
     @Override
@@ -125,6 +227,7 @@ public class CalibrateActivity extends AppCompatActivity {
                             mQuat3.setText(String.valueOf(orient.quat[2]));
                             mQuat4.setText(String.valueOf(orient.quat[3]));
                             mHeading.setText(String.valueOf(orient.heading));
+                            mRotate.setRotation(orient.heading);
                         }
                         mState.setText(state);
                     }

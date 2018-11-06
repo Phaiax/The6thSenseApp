@@ -17,6 +17,7 @@ import android.widget.TextView;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -75,16 +76,56 @@ class TheFoot implements BleManager.BleManagerListener {
         mState = log;
     }
 
-    public void setLeds(boolean leda, boolean ledb, boolean ledc, boolean ledd) {
-        byte a = leda ? (byte) 1 : (byte) 0;
-        byte b = ledb ? (byte) 2 : (byte) 0;
-        byte c = ledc ? (byte) 4 : (byte) 0;
-        byte d = ledd ? (byte) 8 : (byte) 0;
-        sendData(new byte[] {(byte)1, (byte)6, (byte) (a|b|c|d), '\n'});
+    static final String CMD_LED = "2";                     // 2,0,1,0,0; // 0 or 1
+    static final String CMD_MONITORENABLE = "3";               // 3;
+    static final String CMD_MONITORRESULT = "30";        // 30,winkel:float,system:int,gyro:int,accel:int,mag:int;
+    static final String CMD_SETVIBRATIONENABLE = "4";      // 4,1; // 0 or 1
+    static final String CMD_SETMAXINTENSITY = "5";         // 5,152; // max: 255
+    static final String CMD_SETTHRESHOLDFORVIBRATE = "6";  // 6,0.63; // max: 1.0
+    static final String CMD_SETVIBRATIONLOOPTIME = "7";    // 7,20; // in millis
+    static final String CMD_LLSETVIBRATION = "8";          // 8,152,0,0,12; // max each: 255
+
+    public void setMonitoring(boolean enable) {
+        String cmd =  CMD_MONITORENABLE + ',' + (enable ? 1 : 0) + ";";
+        setState(cmd);
+        sendData(cmd.getBytes());
+    }
+
+    public void setLeds(boolean a, boolean b, boolean c, boolean d) {
+        String cmd =  CMD_LED + ',' + (a ? 1 : 0) + ','
+                + (b ? 1 : 0) + ',' + (c ? 1 : 0) + ',' + (d ? 1 : 0) + ";";
+        setState(cmd);
+        sendData(cmd.getBytes());
     }
 
     public void setVibrate(boolean vibrate) {
-        sendData(new byte[] {(byte)1, (byte)1, vibrate ? (byte) 1 : (byte) 0, '\n'});
+        String cmd =  CMD_SETVIBRATIONENABLE + ',' + (vibrate ? 1 : 0) + ";";
+        setState(cmd);
+        sendData(cmd.getBytes());
+    }
+
+    public void setVibThreshold(float threshold) { // 0..1
+        String cmd =  CMD_SETTHRESHOLDFORVIBRATE + ',' + String.valueOf (threshold) + ";";
+        setState(cmd);
+        sendData(cmd.getBytes());
+    }
+
+    public void setManualVibrations(int f, int r, int b, int l) { // 0..255
+        String cmd =  CMD_LLSETVIBRATION + ',' + f + ',' + r + ',' + b + ',' + l + ";";
+        setState(cmd);
+        sendData(cmd.getBytes());
+    }
+
+    public void setVibLoopTime(int time) { // 0..100
+        String cmd =  CMD_SETVIBRATIONLOOPTIME + ',' + time + ";";
+        setState(cmd);
+        sendData(cmd.getBytes());
+    }
+
+    public void setMaxVibIntensity(int max) { // 0..255
+        String cmd =  CMD_SETMAXINTENSITY + ',' + max + ";";
+        setState(cmd);
+        sendData(cmd.getBytes());
     }
 
     public void onPause() {
@@ -195,7 +236,7 @@ class TheFoot implements BleManager.BleManagerListener {
     protected void sendData(byte[] data) {
         if (mUartService != null) {
             mSentBytes += data.length;
-            setState("sendData()");
+            //setState("sendData()");
 
             // Split the value into chunks (UART service has a maximum number of characters that can be written )
             for (int i = 0; i < data.length; i += kTxMaxCharacters) {
@@ -285,7 +326,6 @@ class TheFoot implements BleManager.BleManagerListener {
 
     @Override
     public void onDataAvailable(BluetoothGattCharacteristic characteristic) {
-        setState("onRx()");
 
         // Check if there is a pending sendDataRunnable
         if (characteristic.getService().getUuid().toString().equalsIgnoreCase(UUID_SERVICE)) {
@@ -314,8 +354,8 @@ class TheFoot implements BleManager.BleManagerListener {
                     int i = 0;
 
                     while(i != bytes.length) {
-                        if (bytes[i] == '\n') {
-                            // bytes[i] is now '\n', so skip it
+                        if (bytes[i] == ';') {
+                            // bytes[i] is now ';', so skip it
                             i++;
                             mLastOrientationData = parseLine(toByteArray(mBuffer));
                             mBuffer.clear();
@@ -350,23 +390,31 @@ class TheFoot implements BleManager.BleManagerListener {
         ///4 x float quaternionen w y x z
         ///1 x float ausgerechnete heading(Kompass)
 
-        final String data = new String(bytes, Charset.forName("UTF-8")).trim();
+        // 30,winkel:float,system:int,gyro:int,accel:int,mag:int,q1,q2,q3,q4:float;
 
-        String[] parts = data.split(" ");
-        if (parts.length == 8) {
+        final String data = new String(bytes, Charset.forName("UTF-8")).trim();
+        setState("rx: " + data);
+
+        String[] parts = data.split(",");
+        if (parts.length == 10 && parts[0].equals(CMD_MONITORRESULT)) {
             Orientation result = new Orientation();
-            result.qualiGyro = Integer.parseInt(parts[0]);
-            result.qualiAcc = Integer.parseInt(parts[1]);
-            result.qualiMag = Integer.parseInt(parts[2]);
-            float quat[] = { Float.parseFloat(parts[3]),
-                    Float.parseFloat(parts[4]),
-                    Float.parseFloat(parts[5]),
-                    Float.parseFloat(parts[6])};
+            result.heading = Float.parseFloat(parts[1]);
+            result.qualiGyro = Integer.parseInt(parts[3]);
+            result.qualiAcc = Integer.parseInt(parts[4]);
+            result.qualiMag = Integer.parseInt(parts[5]);
+            float quat[] = { Float.parseFloat(parts[6]),
+                    Float.parseFloat(parts[7]),
+                    Float.parseFloat(parts[8]),
+                    Float.parseFloat(parts[9])};
             result.quat = quat;
-            result.heading = Float.parseFloat(parts[7]);
             return result;
         } else {
-            Log.d(TAG, "Parsing: got " + parts.length + " parts instead of 8: " + data);
+            Log.d(TAG, "Parsing: got " + parts.length + " parts instead of 10: " + data);
+//            if (parts.length >= 1) {
+//                Log.d(TAG, "Cmd id is '" + parts[0] + "' " + (parts.length == 10) + " & "
+//                + (parts[0] == CMD_MONITORRESULT) + ". '" + CMD_MONITORRESULT + "'" +
+//                CMD_MONITORRESULT.);
+//            }
         }
         return null;
     }
